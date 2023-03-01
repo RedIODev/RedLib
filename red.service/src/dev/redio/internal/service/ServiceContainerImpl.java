@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 
 import dev.redio.service.ScopedServiceDescriptor;
 import dev.redio.service.ServiceContainer;
@@ -22,6 +23,8 @@ public class ServiceContainerImpl implements ServiceContainer {
 
     public ServiceContainerImpl() {
         this.provider = new ServiceProviderImpl(this);
+        addSingleton(ServiceContainer.class, this);
+        addSingleton(ServiceProvider.class, provider);
     }
 
     @Override
@@ -41,32 +44,44 @@ public class ServiceContainerImpl implements ServiceContainer {
 
     @Override
     public <T> boolean addTransient(Class<T> service) {
-        var descriptor = ServiceDescriptorImpl.Transient.createTransient(provider, service);
-        return addDescriptor(service, descriptor);
+        var desc = ServiceDescriptorImpl.Transient.createTransient(provider, service);
+        return addDescriptor(service, desc.orElse(null));
     }
 
     @Override
     public <T> boolean addTransient(Class<T> service, Class<? extends T> implementation) {
-        var descriptor = ServiceDescriptorImpl.Transient.createTransient(provider, service, implementation);
-        return addDescriptor(service, descriptor);
+        var desc = ServiceDescriptorImpl.Transient.createTransient(provider, service, implementation);
+        return addDescriptor(service, desc.orElse(null));
+    }
+
+    @Override
+    public <T> boolean addTransient(Class<T> service, Predicate<Class<? extends T>> filter) {
+        var desc = ServiceDescriptorImpl.Transient.createTransient(provider, service, filter);
+        return addDescriptor(service, desc.orElse(null));
     }
 
     @Override
     public <T> boolean addSingleton(Class<T> service) {
-        var descriptor = ServiceDescriptorImpl.Singleton.createSingleton(provider, service);
-       return addDescriptor(service, descriptor);
+        var desc = ServiceDescriptorImpl.Singleton.createSingleton(provider, service);
+        return addDescriptor(service, desc.orElse(null));
     }
 
     @Override
     public <T> boolean addSingleton(Class<T> service, Class<? extends T> implementation) {
-        var descriptor = ServiceDescriptorImpl.Singleton.createSingleton(provider, service, implementation);
-        return addDescriptor(service, descriptor);
+        var desc = ServiceDescriptorImpl.Singleton.createSingleton(provider, service, implementation);
+        return addDescriptor(service, desc.orElse(null));
     }
 
     @Override
     public <T> boolean addSingleton(Class<T> service, T instance) {
         var descriptor = ServiceDescriptorImpl.Singleton.createSingleton(service, instance);
         return addDescriptor(service, descriptor);
+    }
+
+    @Override
+    public <T> boolean addSingleton(Class<T> service, Predicate<Class<? extends T>> filter) {
+        var desc = ServiceDescriptorImpl.Singleton.createSingleton(provider, service, filter);
+        return addDescriptor(service, desc.orElse(null));
     }
 
     @Override
@@ -78,6 +93,12 @@ public class ServiceContainerImpl implements ServiceContainer {
     @Override
     public <T> boolean addScoped(Class<T> service, Class<? extends T> implementation) {
         var descriptor = ScopedServiceDescriptorImpl.createScoped(service, implementation);
+        return addScopedDescriptor(service, descriptor);
+    }
+
+    @Override
+    public <T> boolean addScoped(Class<T> service, Predicate<Class<? extends T>> filter) {
+        var descriptor = ScopedServiceDescriptorImpl.createScoped(service, filter);
         return addScopedDescriptor(service, descriptor);
     }
 

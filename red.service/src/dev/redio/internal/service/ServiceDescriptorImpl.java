@@ -1,11 +1,15 @@
 package dev.redio.internal.service;
 
 import java.util.Objects;
+import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.function.Predicate;
 
 import dev.redio.service.ServiceDescriptor;
 import dev.redio.service.ServiceProvider;
 import dev.redio.util.SideChannel;
+import dev.redio.util.tuple.Tup2;
 
 public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
 
@@ -29,21 +33,20 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
         return implementationType;
     }
 
-    private static <T> T createInstance(ServiceProvider loader, Class<T> serviceType) {
-        try (var channel = SideChannel.register(loader, ServiceProvider.class)) {
-            return java.util.ServiceLoader.load(serviceType).findFirst().orElse(null);
-        }
+    private static <T> Optional<Provider<T>> findProvider(Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+        return ServiceLoader.load(serviceType).stream().filter(p -> filter.test(p.type())).findFirst();
     }
 
-    private static <T> T createInstance(ServiceProvider loader, Class<T> serviceType,
-            Class<? extends T> implementationType) {
-        try (var channel = SideChannel.register(loader, ServiceProvider.class)) {
-            return java.util.ServiceLoader.load(serviceType)
-                    .stream()
-                    .filter(p -> p.type().equals(implementationType))
-                    .map(java.util.ServiceLoader.Provider::get)
-                    .findFirst()
-                    .get();
+    private static <T> Optional<Tup2<Class<? extends T>, T>> createInstance(ServiceProvider provider,
+            Class<T> serviceType, Class<? extends T> implementationType) {
+        return createInstance(provider, serviceType, t -> t.equals(implementationType));
+    }
+
+    private static <T> Optional<Tup2<Class<? extends T>, T>> createInstance(ServiceProvider provider,
+            Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+        try (var channel = SideChannel.register(provider, ServiceProvider.class)) {
+            return findProvider(serviceType, filter)
+                    .map(p -> new Tup2<>(p.type(), p.get()));
         }
     }
 
@@ -62,21 +65,19 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
             return new Singleton<>(serviceType, (Class<? extends T>) instance.getClass(), instance);
         }
 
-        @SuppressWarnings("unchecked")
-        public static <T> Singleton<T> createSingleton(ServiceProvider loader, Class<T> serviceType) {
-            Objects.requireNonNull(loader);
-            T instance = createInstance(loader, serviceType);
-            if (instance == null)
-                return null;
-            return new Singleton<>(serviceType, (Class<? extends T>) instance.getClass(), instance);
+        public static <T> Optional<Singleton<T>> createSingleton(ServiceProvider provider, Class<T> serviceType) {
+            return createSingleton(provider, serviceType, serviceType);
         }
 
-        public static <T> Singleton<T> createSingleton(ServiceProvider loader, Class<T> serviceType,
+        public static <T> Optional<Singleton<T>> createSingleton(ServiceProvider provider, Class<T> serviceType,
                 Class<? extends T> implementationType) {
-            T instance = createInstance(loader, serviceType, implementationType);
-            if (instance == null)
-                return null;
-            return new Singleton<>(serviceType, implementationType, instance);
+            return createInstance(provider, serviceType, implementationType)
+                    .map(t -> new Singleton<>(serviceType, implementationType, t.item2()));
+        }
+
+        public static<T> Optional<Singleton<T>> createSingleton(ServiceProvider provider, Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+            return createInstance(provider, serviceType, filter)
+                    .map(t -> new Singleton<>(serviceType, t.item1(), t.item2()));
         }
 
         @Override
@@ -96,21 +97,20 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
             super(serviceType, implementationType, instance);
         }
 
-        @SuppressWarnings("unchecked")
-        public static <T> Scoped<T> createScoped(ServiceProvider loader, Class<T> serviceType) {
-            Objects.requireNonNull(loader);
-            T instance = createInstance(loader, serviceType);
-            if (instance == null)
-                return null;
-            return new Scoped<>(serviceType, (Class<? extends T>) instance.getClass(), instance);
+        public static <T> Optional<Scoped<T>> createScoped(ServiceProvider provider, Class<T> serviceType) {
+            return createScoped(provider, serviceType, serviceType);
         }
 
-        public static <T> Scoped<T> createScoped(ServiceProvider loader, Class<T> serviceType,
+        public static <T> Optional<Scoped<T>> createScoped(ServiceProvider provider, Class<T> serviceType,
                 Class<? extends T> implementationType) {
-            T instance = createInstance(loader, serviceType, implementationType);
-            if (instance == null)
-                return null;
-            return new Scoped<>(serviceType, implementationType, instance);
+            return createInstance(provider, serviceType, implementationType)
+                    .map(t -> new Scoped<>(serviceType, implementationType, t.item2()));
+        }
+
+        public static <T> Optional<Scoped<T>> createScoped(ServiceProvider provider, Class<T> serviceType,
+                Predicate<Class<? extends T>> filter) {
+            return createInstance(provider, serviceType, filter)
+                    .map(t -> new Scoped<>(serviceType, t.item1(), t.item2()));
         }
 
         @Override
@@ -127,32 +127,27 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
 
         private Transient(ServiceProvider serviceProvider, Class<T> serviceType, Provider<T> provider) {
             super(serviceType, provider.type());
+            Objects.requireNonNull(provider);
+            Objects.requireNonNull(serviceType);
             this.serviceProvider = serviceProvider;
             this.provider = provider;
         }
 
-        public static <T> Transient<T> createTransient(ServiceProvider loader, Class<T> serviceType) {
-            Objects.requireNonNull(loader);
-            Objects.requireNonNull(serviceType);
-            var provider = java.util.ServiceLoader.load(serviceType).stream().findFirst().get();
-            if (provider == null)
-                return null;
-            return new Transient<>(loader, serviceType, provider);
+        public static <T> Optional<Transient<T>> createTransient(ServiceProvider provider, Class<T> serviceType) {
+            return createTransient(provider, serviceType, serviceType);
         }
 
-        public static <T> Transient<T> createTransient(ServiceProvider loader, Class<T> serviceType,
+        public static <T> Optional<Transient<T>> createTransient(ServiceProvider provider, Class<T> serviceType,
                 Class<? extends T> implementationType) {
-            Objects.requireNonNull(loader);
-            Objects.requireNonNull(serviceType);
             Objects.requireNonNull(implementationType);
-            var provider = java.util.ServiceLoader.load(serviceType)
-                    .stream()
-                    .filter(p -> p.type().equals(implementationType))
-                    .findFirst()
-                    .get();
-            if (provider == null)
-                return null;
-            return new Transient<>(loader, serviceType, provider);
+            return findProvider(serviceType, t -> t.equals(implementationType))
+                    .map(p -> new Transient<>(provider, serviceType, p));
+        }
+
+        public static <T> Optional<Transient<T>> createTransient(ServiceProvider provider, Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+            Objects.requireNonNull(filter);
+            return findProvider(serviceType, filter)
+                    .map(p -> new Transient<>(provider, serviceType, p));
         }
 
         @Override

@@ -1,12 +1,11 @@
 package dev.redio.mediator;
 
 import dev.redio.internal.mediator.MediatorImpl;
+import dev.redio.service.ServiceContainer;
 
-public interface Mediator extends Sender, Publisher {    //TODO: change to dev.redio.concurrent.Task
+public interface Mediator extends Sender, Publisher, AutoCloseable {
 
-    static Mediator newDefault(ServiceProvider serviceProvider) {
-        return new MediatorImpl(serviceProvider);
+    static void registerDefaultMediator(ServiceContainer container) {//TODO: Rethink MediatorScope and Singletonness of Mediator
+        container.addSingleton(Mediator.class, MediatorImpl.class);
     }
-
-
 }
