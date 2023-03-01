@@ -6,7 +6,7 @@
 		<project>red.base</project>
 		<project>red.service</project>
 		<project>red.concurrent</project>
-		<project>red.service</project>
+		<project>red.mediator</project>
 	</projects>
 	<buildSpec>
 	</buildSpec>
