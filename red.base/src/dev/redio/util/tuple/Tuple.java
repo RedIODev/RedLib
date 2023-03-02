@@ -4,15 +4,17 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
 public interface Tuple extends Iterable<Object>, Comparable<Tuple>, Serializable {
-    //TODO Generate Tuples at compileTime
+    // TODO Generate Tuples at compileTime
+    // TODO Add Ref to util
     @Override
     default Iterator<Object> iterator() {
         assert getClass().isRecord();
-        return new TupleIterator(getClass().getRecordComponents(), (Record)this);
+        return new TupleIterator(getClass().getRecordComponents(), (Record & Tuple) this);
     }
 
     @Override
@@ -26,18 +28,18 @@ public interface Tuple extends Iterable<Object>, Comparable<Tuple>, Serializable
         try {
             return getClass().getRecordComponents()[index].getAccessor().invoke(this);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Could not access record component",e);
+            throw new IllegalStateException("Could not access record component", e);
         }
     }
 
     default Object get(String fieldName) {
         assert getClass().isRecord();
         try {
-            for (var comp : getClass().getRecordComponents()) 
+            for (var comp : getClass().getRecordComponents())
                 if (Objects.equals(fieldName, comp.getName()))
                     return comp.getAccessor().invoke(this);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new IllegalStateException("Could not access record component",e);
+            throw new IllegalStateException("Could not access record component", e);
         }
         throw new NoSuchElementException("No tuple member with name '" + fieldName + "' found");
     }
@@ -45,6 +47,29 @@ public interface Tuple extends Iterable<Object>, Comparable<Tuple>, Serializable
     default int length() {
         assert getClass().isRecord();
         return getClass().getRecordComponents().length;
+    }
+
+    default Object[] toArray() {
+        var array = new Object[length()];
+        var iter = iterator();
+        for (int i = 0; i < array.length; i++)
+            array[i] = iter.next();
+        return array;
+    }
+
+    default List<Object> toList() {
+        return List.of(toArray());
+    }
+
+    static String toString(Tuple tuple) {
+        var result = "(";
+        var iter = tuple.iterator();
+        while (iter.hasNext()) {
+            result += iter.next();
+            if (iter.hasNext())
+                result += ", ";
+        }
+        return result + ')';
     }
 
     final class TupleIterator implements Iterator<Object> {
@@ -55,9 +80,9 @@ public interface Tuple extends Iterable<Object>, Comparable<Tuple>, Serializable
 
         private int index = 0;
 
-        public TupleIterator(RecordComponent[] components, Record record) {
+        public <RT extends Record & Tuple> TupleIterator(RecordComponent[] components, RT recordTuple) {
             this.components = Objects.requireNonNull(components);
-            this.record = Objects.requireNonNull(record);
+            this.record = Objects.requireNonNull(recordTuple);
         }
 
         @Override
@@ -70,7 +95,7 @@ public interface Tuple extends Iterable<Object>, Comparable<Tuple>, Serializable
             try {
                 return components[index++].getAccessor().invoke(record);
             } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException("Could not access record component",e);
+                throw new IllegalStateException("Could not access record component", e);
             }
         }
     }
