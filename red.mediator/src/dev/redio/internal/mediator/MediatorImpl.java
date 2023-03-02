@@ -16,20 +16,19 @@ import dev.redio.mediator.Request;
 import dev.redio.mediator.RequestHandler;
 import dev.redio.service.ServiceDescriptor;
 import dev.redio.service.ServiceContainer;
-import dev.redio.service.ServiceScope;
 import dev.redio.service.ServiceProvider;
 
 public class MediatorImpl implements Mediator {
 
     private final ServiceContainer serviceContainer;
 
-    private final ServiceScope scope;
+    private final ServiceProvider provider;
 
     public MediatorImpl() {
         var container = ServiceProvider.getDependency(ServiceContainer.class);
         Objects.requireNonNull(container);
         this.serviceContainer = container;
-        this.scope = container.getServiceProvider().createScope();
+        this.provider = container.getServiceProvider();
     }
 
     @Override
@@ -55,7 +54,6 @@ public class MediatorImpl implements Mediator {
     }
 
     private <T extends BaseHandler> T getOrRegisterHandler(Class<? extends BaseMessage> requestType) {
-        var provider = scope.serviceProvider();
         Optional<T> handle = tryFindHandler(provider.getServices(BaseHandler.class), requestType);
         if (handle.isPresent())
             return handle.get();
@@ -75,10 +73,5 @@ public class MediatorImpl implements Mediator {
     private static Predicate<Class<? extends BaseHandler>> serviceFilter(Class<? extends BaseMessage> requestType) {
         Predicate<Class<? extends BaseHandler>> filter = desc -> desc.isAnnotationPresent(Handles.class);
         return filter.and(desc -> desc.getAnnotation(Handles.class).value().equals(requestType));
-    }
-
-    @Override
-    public void close() {
-        scope.close();
     }
 }
