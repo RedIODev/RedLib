@@ -1,5 +1,7 @@
 package dev.redio.internal.service;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -12,6 +14,35 @@ import dev.redio.util.SideChannel;
 import dev.redio.util.tuple.Tup2;
 
 public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
+
+    private static final Method INTERNAL_LOAD_METHOD;
+
+    static {
+        Method m = null;
+        try {
+            m = ServiceLoader.class.getDeclaredMethod("load", Class.class, ClassLoader.class, Module.class);
+            m.setAccessible(true);
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+        INTERNAL_LOAD_METHOD = m;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <S> ServiceLoader<S> loadINTERNAL(Class<S> service) {
+        var skippedModules = new String[]{"red.base", "red.mediator", "red.service","red.concurrent"};
+        var walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+        Class<?> caller = walker.walk(frames -> frames
+                .filter(frame -> !Arrays.asList(skippedModules).contains(frame.getDeclaringClass().getModule().getName()))
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .findFirst().orElseThrow());
+
+        try {
+            return (ServiceLoader<S>)INTERNAL_LOAD_METHOD.invoke(null, service, caller.getClassLoader(), caller.getModule());
+        } catch (Exception e) {
+            throw new Error(e);
+        }
+    }
 
     private final Class<T> serviceType;
     private final Class<? extends T> implementationType;
@@ -34,7 +65,8 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
     }
 
     private static <T> Optional<Provider<T>> findProvider(Class<T> serviceType, Predicate<Class<? extends T>> filter) {
-        return ServiceLoader.load(serviceType).stream().filter(p -> filter.test(p.type())).findFirst();
+
+        return loadINTERNAL(serviceType).stream().filter(p -> filter.test(p.type())).findFirst();
     }
 
     private static <T> Optional<Tup2<Class<? extends T>, T>> createInstance(ServiceProvider provider,
@@ -75,7 +107,8 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
                     .map(t -> new Singleton<>(serviceType, implementationType, t.item2()));
         }
 
-        public static<T> Optional<Singleton<T>> createSingleton(ServiceProvider provider, Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+        public static <T> Optional<Singleton<T>> createSingleton(ServiceProvider provider, Class<T> serviceType,
+                Predicate<Class<? extends T>> filter) {
             return createInstance(provider, serviceType, filter)
                     .map(t -> new Singleton<>(serviceType, t.item1(), t.item2()));
         }
@@ -144,7 +177,8 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
                     .map(p -> new Transient<>(provider, serviceType, p));
         }
 
-        public static <T> Optional<Transient<T>> createTransient(ServiceProvider provider, Class<T> serviceType, Predicate<Class<? extends T>> filter) {
+        public static <T> Optional<Transient<T>> createTransient(ServiceProvider provider, Class<T> serviceType,
+                Predicate<Class<? extends T>> filter) {
             Objects.requireNonNull(filter);
             return findProvider(serviceType, filter)
                     .map(p -> new Transient<>(provider, serviceType, p));
