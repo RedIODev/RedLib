@@ -196,19 +196,4 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
             return TRANSIENT_PRIORITY;
         }
     }
-
-    // @Override
-    // public T getService() {
-    // try (var channel = SideChannel.register(serviceProvider)) {
-    // return provider.get();
-    // }
-    // }
-
-    // @Override
-    // public RegistrationType registrationType() {
-    // // TODO Auto-generated method stub
-    // throw new UnsupportedOperationException("Unimplemented method
-    // 'registrationType'");
-    // }
-
 }

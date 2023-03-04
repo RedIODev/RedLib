@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import dev.redio.concurrent.task.ConsumeTask;
+import dev.redio.concurrent.task.IntermediateTask;
 import dev.redio.concurrent.task.LazyTask;
 import dev.redio.concurrent.task.Task;
 
@@ -46,14 +48,12 @@ public class CompletedTaskImpl<T> implements Task<T> {
 
     @Override
     public <OUT> Task<OUT> fork(Function<? super T, ? extends OUT> func) {
-        // TODO Auto-generated method stub
-        return null;
+        return new IntermediateTask<>(this, func);
     }
 
     @Override
     public Task<Void> fork(Consumer<? super T> func) {
-        // TODO Auto-generated method stub
-        return null;
+        return new ConsumeTask<>(this, func);
     }
     
 }
