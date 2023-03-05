@@ -64,6 +64,11 @@ public abstract class ServiceDescriptorImpl<T> implements ServiceDescriptor<T> {
         return implementationType;
     }
 
+    @Override
+    public String toString() {
+        return "Descriptor[Service:'" + serviceType.getName() + "', Impl:'" + implementationType.getName() + "']";
+    }
+
     private static <T> Optional<Provider<T>> findProvider(Class<T> serviceType, Predicate<Class<? extends T>> filter) {
 
         return loadINTERNAL(serviceType).stream().filter(p -> filter.test(p.type())).findFirst();

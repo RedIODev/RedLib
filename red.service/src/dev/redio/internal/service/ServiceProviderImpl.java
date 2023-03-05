@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import dev.redio.service.NoSuchServiceException;
 import dev.redio.service.ServiceContainer;
 import dev.redio.service.ServiceDescriptor;
 import dev.redio.service.ServiceProvider;
@@ -33,7 +34,11 @@ public class ServiceProviderImpl implements ServiceProvider {
     @SuppressWarnings("unchecked")
     public <T> SortedSet<ServiceDescriptor<T>> getServices(Class<T> service) {
         SortedSet<ServiceDescriptor<T>> result = new TreeSet<>(ServiceDescriptor.DESCRIPTOR_COMPARATOR);
-        result.addAll((SortedSet<? extends ServiceDescriptor<T>>) descriptors.get(service));
+        var serviceDescriptors = descriptors.get(service);
+        if (serviceDescriptors != null)
+            result.addAll((SortedSet<? extends ServiceDescriptor<T>>) serviceDescriptors);
+        // throw new NoSuchServiceException("A service of type: '"+ service.getName() +
+        // "' is not registered");
         return Collections.unmodifiableSortedSet(result);
     }
 

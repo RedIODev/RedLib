@@ -55,10 +55,11 @@ public class MediatorImpl implements Mediator {
 
     private <T extends BaseHandler> T getOrRegisterHandler(Class<? extends BaseMessage> requestType) {
         Optional<T> handle = tryFindHandler(provider.getServices(BaseHandler.class), requestType);
+
         if (handle.isPresent())
             return handle.get();
         serviceContainer.addScoped(BaseHandler.class, serviceFilter(requestType));
-            return MediatorImpl.<T>tryFindHandler(provider.getServices(BaseHandler.class), requestType).orElse(null);
+        return MediatorImpl.<T>tryFindHandler(provider.getServices(BaseHandler.class), requestType).orElse(null);
     }
 
     @SuppressWarnings("unchecked")
