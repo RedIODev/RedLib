@@ -1,5 +1,7 @@
 package dev.redio.concurrent.task;
 
+import dev.redio.internal.concurrent.TaskCompleted;
+
 public interface Task<T> {
     
     Poll<T> poll(Context context);
@@ -10,5 +12,9 @@ public interface Task<T> {
 
     static <T> T block(Task<T> task) {
         
+    }
+
+    static <T> Task<T> completed(T value) {
+        return new TaskCompleted<>(value);
     }
 }
