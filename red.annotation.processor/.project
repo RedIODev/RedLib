@@ -1,21 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>RedLib</name>
+	<name>red.annotation.processor</name>
 	<comment></comment>
 	<projects>
-		<project>red.annotation.processor</project>
-		<project>red.base</project>
-		<project>red.concurrent</project>
-		<project>red.mediator</project>
-		<project>red.service</project>
 	</projects>
 	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
 	</buildSpec>
 	<natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
 	<filteredResources>
 		<filter>
-			<id>1677666759872</id>
+			<id>1678622326818</id>
 			<name></name>
 			<type>30</type>
 			<matcher>

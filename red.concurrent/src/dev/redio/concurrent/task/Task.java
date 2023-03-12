@@ -11,7 +11,7 @@ public interface Task<T> {
     }
 
     static <T> T block(Task<T> task) {
-        
+        return null;
     }
 
     static <T> Task<T> completed(T value) {

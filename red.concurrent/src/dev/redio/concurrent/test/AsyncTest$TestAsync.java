@@ -32,13 +32,13 @@ public class AsyncTest$TestAsync extends StateMachine implements Task<String> {
                 state = State.PART1;
                 yield new Poll.Pending<>();
             }
-
+            default -> throw new RuntimeException();
         };
     }
 
     private void part1() {
         string = System.console().readLine();
-        asyncResult1 = 
+
     }
 
     private void part2() {
